@@ -22,7 +22,7 @@ class AuthService:
         # 사용자 조회
         query = (
             select(User).
-            where(User.username == login_data.username)
+            where(User.email == login_data.email)
         )
         user = self.db.execute(query).scalar_one_or_none()
         
@@ -38,7 +38,7 @@ class AuthService:
     def create_user_token(self, user: User):
         # 토큰에 포함될 데이터
         token_data = {
-            "sub": user.username,
+            "username": user.username,
             "email": user.email,
             "user_id": user.id,
         }
@@ -71,15 +71,14 @@ class AuthService:
     """
     def refresh_access_token(self, refresh_token: str):
         # 리프레시 토큰 검증
-        payload = verify_token(refresh_token, token_type="refresh")
+        payload = verify_token(refresh_token)
         if not payload:
             return None
             
         # 토큰에서 사용자 정보 추출
-        username = payload.get("sub")
         user_id = payload.get("user_id")
         
-        if not username or not user_id:
+        if not user_id:
             return None
             
         # Redis에서 리프레시 토큰 유효성 확인
@@ -88,13 +87,17 @@ class AuthService:
             return None
             
         # 사용자 조회
-        user = self.db.query(User).filter(User.username == username).first()
-        if not user or not user.is_active:
+        query = (
+            select(User).
+            where(User.id == user_id)
+        )
+        user = self.db.execute(query).scalar_one_or_none()
+        if not user:
             return None
             
         # 토큰에 포함될 데이터
         token_data = {
-            "sub": user.username,
+            "username": user.username,
             "email": user.email,
             "user_id": user.id,
         }

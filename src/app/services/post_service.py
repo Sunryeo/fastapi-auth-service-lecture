@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,8 @@ class PostService:
     """
     def create_post(self, post: PostCreate, user: User):
         created_post = Post(**post.model_dump())
+        author_id = user.id
+        created_post.author_id = author_id
 
         self.db.add(created_post)
         self.db.commit()
@@ -68,7 +70,10 @@ class PostService:
         
         # 작성자 확인
         if post.author_id != user.id:
-            return None
+            raise HTTPException(
+                status_code=403,
+                detail="접근 권한이 없습니다."
+            )
         
         update_dict = {
             key: value

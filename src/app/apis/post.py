@@ -106,6 +106,16 @@ def get_post(post_id: int, post_service: PostService = Depends(get_post_service)
                         }
                     }
                 }
+            },
+            403: {
+                "description": "게시글 수정 권한 없음",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "detail": "접근 권한이 없습니다.",
+                        }
+                    }
+                }
             }
         }
 )

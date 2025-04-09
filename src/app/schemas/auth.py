@@ -1,16 +1,17 @@
 # app/schemas/auth.py
 from pydantic import BaseModel
 
-class Token(BaseModel):
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 class TokenData(BaseModel):
     username: str | None = None
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
 
 class RefreshRequest(BaseModel):
     refresh_token: str

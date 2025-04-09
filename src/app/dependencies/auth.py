@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -9,13 +9,17 @@ from src.app.services.token_service import TokenService
 from src.app.utils.auth import verify_token
 
 # OAuth2 인증 체계 설정 (토큰 URL 지정)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+bearer_scheme = HTTPBearer()
 
 """
 토큰에서 현재 사용자 정보를 가져오는 의존성 함수
 """
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+# token: str = Depends(oauth2_scheme)
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
     # 토큰이 블랙리스트에 있는지 확인
+    token = credentials.credentials
+    
     if TokenService.is_token_blacklisted(token):
         raise HTTPException(
             status_code=401,
@@ -33,7 +37,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         )
     
     # 토큰에서 사용자명 추출
-    username = payload.get("sub")
+    username = payload.get("username")
     if username is None:
         raise HTTPException(
             status_code=401,
@@ -53,8 +57,5 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             detail="사용자를 찾을 수 없습니다.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # 토큰 정보를 사용자 객체에 추가 (로그아웃을 위해)
-    user.token = token
     
     return user

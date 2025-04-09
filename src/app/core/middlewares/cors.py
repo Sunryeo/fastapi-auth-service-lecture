@@ -7,9 +7,8 @@ def setup_cors(app: FastAPI):
     """
     # 허용할 오리진 목록
     origins = [
-        "http://localhost",
         "http://localhost:3000",
-        "http://localhost:8080",
+        "http://localhost:8000",
     ]
 
     # CORS 미들웨어 추가

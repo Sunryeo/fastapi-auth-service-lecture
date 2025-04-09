@@ -11,30 +11,13 @@ class UserService:
     def __init__(self, db: Session):
             self.db = db
             
-    def create_user(self, user: UserCreate):
-        # 이메일 중복 확인
-        db_user = self.get_user_by_email(user.email)
-    
-        if db_user:
-            raise HTTPException(
-                status_code=400,
-                detail="이미 존재하는 이메일입니다."
-            )
-            
-        # 사용자명 중복 확인
-        db_user = self.get_user_by_username(user.username)
-        if db_user:
-            raise HTTPException(
-                status_code=400,
-                detail="이미 존재하는 사용자 이름입니다."
-            )
-        
+    def create_user(self, user: UserCreate):        
         # 새 사용자 생성
         hashed_password = get_password_hash(user.password)
         db_user = User(
             email=user.email,
             username=user.username,
-            hashed_password=hashed_password
+            password=hashed_password
         )
         
         self.db.add(db_user)

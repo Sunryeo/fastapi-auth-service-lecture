@@ -24,13 +24,21 @@ router = APIRouter()
         }
 )
 def register_user(user: UserCreate, user_service: UserService = Depends(get_user_service)):
-    existed_user = user_service.get_user_by_email(user.email)
+    existed_user_email = user_service.get_user_by_email(user.email)
 
-    if existed_user:
+    if existed_user_email:
         raise HTTPException(
             status_code=409,
             detail="이미 존재하는 이메일입니다."
         )
+    
+    existed_user_name = user_service.get_user_by_username(user.username)
+
+    if existed_user_name:
+            raise HTTPException(
+                status_code=409,
+                detail="이미 존재하는 사용자 이름입니다."
+            )
     
     created_user = user_service.create_user(user)
 

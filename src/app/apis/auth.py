@@ -1,21 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordRequestForm
 
 from src.app.dependencies.auth import get_current_user
 from src.app.models.user import User
-from src.app.schemas.auth import RefreshRequest, Token, LoginRequest
+from src.app.schemas.auth import RefreshRequest, TokenResponse, LoginRequest
 from src.app.services.auth_service import AuthService, get_auth_service
 from src.app.services.token_service import TokenService
-from src.app.utils.auth import get_token_expiry
+from src.app.utils.auth import get_token_expiry, verify_token
 
 router = APIRouter()
+bearer_scheme = HTTPBearer()
 
 """
 사용자 로그인 및 JWT 토큰 발급
 """
 @router.post(
         "/login", 
-        response_model=Token,
+        response_model=TokenResponse,
         summary="사용자 로그인",
         description="사용자 로그인 후 JWT 토큰을 발급합니다.",
         responses={
@@ -53,7 +54,7 @@ OAuth2 호환 토큰 발급 (form 데이터 사용)
 """
 @router.post(
         "/token", 
-        response_model=Token,
+        response_model=TokenResponse,
         summary="OAuth2 호환 토큰 발급",
         description="OAuth2 호환 토큰을 발급합니다.",
         responses={
@@ -115,18 +116,16 @@ def login_for_access_token(
         }
 )
 def logout(
-    current_user: User = Depends(get_current_user),
-    refresh_token: str = None,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     ):
+    # 헤더에서 토큰 추출
+    token = credentials.credentials
+
     # 현재 토큰의 만료 시간 계산
-    token_expiry = get_token_expiry(current_user.token)
+    token_expiry = get_token_expiry(token)
     
     # 토큰을 블랙리스트에 추가
-    TokenService.blacklist_token(current_user.token, token_expiry)
-
-    # 리프레시 토큰이 들어올 경우 해당 토큰 무효화
-    if refresh_token:
-        TokenService.revoke_refresh_token(current_user.id, refresh_token)
+    TokenService.blacklist_token(token, token_expiry)
     
     return {"message": "로그아웃되었습니다."}
 
@@ -135,7 +134,7 @@ Refresh 토큰을 사용하여 새로운 액세스 토큰 발급
 """
 @router.post(
         "/refresh", 
-        response_model=Token,
+        response_model=TokenResponse,
         summary="리프레시 토큰으로 액세스 토큰 갱신",
         description="리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
         responses={
@@ -188,13 +187,16 @@ def refresh_token(refresh_data: RefreshRequest, auth_service: AuthService = Depe
             }
         }
 )
-def logout_all_sessions(current_user: User = Depends(get_current_user)):
-
-    # 현재 액세스 토큰 블랙리스트에 추가
-    token_expiry = get_token_expiry(current_user.token)
-    TokenService.blacklist_token(current_user.token, token_expiry)
+def logout_all_sessions(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+):
+    token = credentials.credentials
     
-    # 사용자의 모든 리프레시 토큰 무효화
-    TokenService.revoke_refresh_token(current_user.id)
+    # 현재 액세스 토큰 블랙리스트에 추가
+    token_expiry = get_token_expiry(token)
+    TokenService.blacklist_token(token, token_expiry)
+    
+    user_id = verify_token(token).get("user_id")
+    TokenService.revoke_refresh_token(user_id)
     
     return {"message": "모든 기기로부터 로그아웃되었습니다."}

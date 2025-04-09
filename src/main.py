@@ -5,11 +5,13 @@ from .app.core.middlewares.cors import setup_cors
 from .app.core.middlewares.security import setup_security
 from .app.core.redis_config import init_redis
 from .app.database import Base, engine
+from .app.models.post import Post
+from .app.models.user import User
 
 
 app = FastAPI(
-    title="FastAPI NCP Mailing Service",
-    description="게시판과 NCP 메일 발송 기능을 제공하는 API",
+    title="FastAPI Auth Service",
+    description="FastAPI 인증/인가 & 게시판 서비스입니다.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"

@@ -42,12 +42,17 @@ class TokenService:
         # 사용자별 refresh 토큰 키
         user_key = f"{REFRESH_TOKEN_PREFIX}{user_id}"
         
-        # 토큰의 고유 식별자를 값으로 사용
-        # 동일한 사용자의 이전 refresh 토큰도 유지 (멀티 디바이스 지원)
-        redis_client.sadd(user_key, refresh_token)
-        
-        # Refresh 토큰 만료 시간 설정 (7일 + 여유 시간)
-        redis_client.expire(user_key, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS + 1).total_seconds())
+        # Redis 파이프라인 사용하여 여러 명령어를 한 번에 실행
+        with redis_client.pipeline() as pipe:
+            # 토큰의 고유 식별자를 값으로 사용
+            pipe.sadd(user_key, refresh_token)
+            
+            # 만료 시간 설정 (7일 + 여유 시간)
+            expire_seconds = int(timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS + 1).total_seconds())
+            
+            pipe.expire(user_key, expire_seconds)
+            
+            pipe.execute()
         
         return True
     
