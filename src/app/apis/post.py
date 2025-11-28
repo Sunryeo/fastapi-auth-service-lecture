@@ -53,7 +53,7 @@ def create_post(
 def get_posts(post_service: PostService = Depends(get_post_service)):
     posts = post_service.get_posts()
 
-    if posts is None:
+    if not posts:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     
     return posts
